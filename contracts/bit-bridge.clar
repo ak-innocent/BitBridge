@@ -97,3 +97,49 @@
     (ok true)
   )
 )
+
+(define-public (remove-from-whitelist (recipient principal))
+  (begin
+    (try! (check-is-bridge-owner))
+    (asserts! (is-valid-principal recipient) ERR-INVALID-RECIPIENT)
+    (map-set recipient-whitelist recipient false)
+    (ok true)
+  )
+)
+
+;; Bridge Control Functions
+(define-public (pause-bridge)
+  (begin
+    (try! (check-is-bridge-owner))
+    (var-set is-bridge-paused true)
+    (ok true)
+  )
+)
+
+(define-public (unpause-bridge)
+  (begin
+    (try! (check-is-bridge-owner))
+    (var-set is-bridge-paused false)
+    (ok true)
+  )
+)
+
+;; Fee Management
+(define-public (update-bridge-fee (new-fee uint))
+  (begin
+    (try! (check-is-bridge-owner))
+    (asserts! (< new-fee u100) ERR-INVALID-AMOUNT)
+    (var-set bridge-fee-percentage new-fee)
+    (ok true)
+  )
+)
+
+(define-public (update-max-deposit (new-max uint))
+  (begin
+    (try! (check-is-bridge-owner))
+    (asserts! (> new-max u0) ERR-INVALID-AMOUNT)
+    (asserts! (< new-max u100000000) ERR-INVALID-AMOUNT)
+    (var-set max-deposit-amount new-max)
+    (ok true)
+  )
+)
