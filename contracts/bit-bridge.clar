@@ -48,3 +48,52 @@
   { user: principal }
   { amount: uint }
 )
+
+;; Authorization Functions
+(define-read-only (is-bridge-owner (sender principal))
+  (is-eq sender (var-get bridge-owner))
+)
+
+;; Validation Helpers
+(define-private (is-valid-principal (addr principal))
+  (and 
+    (not (is-eq addr tx-sender))
+    (not (is-eq addr .none))
+  )
+)
+
+(define-private (is-valid-tx-hash (hash (string-ascii 64)))
+  (and 
+    (not (is-eq hash ""))
+    (> (len hash) u10)
+  )
+)
+
+;; Oracle Management
+(define-public (add-oracle (oracle principal))
+  (begin
+    (try! (check-is-bridge-owner))
+    (asserts! (is-valid-principal oracle) ERR-INVALID-RECIPIENT)
+    (map-set authorized-oracles oracle true)
+    (ok true)
+  )
+)
+
+(define-public (remove-oracle (oracle principal))
+  (begin
+    (try! (check-is-bridge-owner))
+    (asserts! (is-valid-principal oracle) ERR-INVALID-RECIPIENT)
+    (map-set authorized-oracles oracle false)
+    (ok true)
+  )
+)
+
+;; Whitelist Management
+(define-public (add-to-whitelist (recipient principal))
+  (begin
+    (try! (check-is-bridge-owner))
+    (asserts! (is-valid-principal recipient) ERR-INVALID-RECIPIENT)
+    (map-set recipient-whitelist recipient true)
+    (ok true)
+  )
+)
