@@ -143,3 +143,40 @@
     (ok true)
   )
 )
+
+;; Core Bridge Functions
+(define-public (deposit-bitcoin 
+  (btc-tx-hash (string-ascii 64))
+  (amount uint)
+  (recipient principal)
+)
+  (let 
+    (
+      (fee (/ (* amount (var-get bridge-fee-percentage)) u1000))
+      (net-amount (- amount fee))
+      (is-whitelisted (default-to false (map-get? recipient-whitelist recipient)))
+    )
+    ;; Input Validation
+    (asserts! (is-valid-tx-hash btc-tx-hash) ERR-INVALID-TX-HASH)
+    (asserts! (> amount u0) ERR-INVALID-AMOUNT)
+    (asserts! (<= amount (var-get max-deposit-amount)) ERR-MAX-DEPOSIT-EXCEEDED)
+    (asserts! (is-valid-principal recipient) ERR-INVALID-RECIPIENT)
+    (asserts! is-whitelisted ERR-INVALID-RECIPIENT)
+    
+    ;; Bridge State Validation
+    (asserts! (not (var-get is-bridge-paused)) ERR-BRIDGE-PAUSED)
+    (asserts! (is-none (map-get? processed-transactions { tx-hash: btc-tx-hash })) ERR-TRANSACTION-ALREADY-PROCESSED)
+    
+    ;; Transaction Validation
+    (try! (validate-bitcoin-transaction btc-tx-hash amount))
+    
+    ;; Token Minting
+    (try! (ft-mint? Bitcoin-btc net-amount recipient))
+    
+    ;; State Updates
+    (map-set processed-transactions { tx-hash: btc-tx-hash } true)
+    (var-set total-locked-bitcoin (+ (var-get total-locked-bitcoin) amount))
+    
+    (ok net-amount)
+  )
+)
